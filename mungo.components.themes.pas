@@ -5,7 +5,12 @@ unit mungo.components.themes;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, Types, Math, ImgList,
+  Classes, SysUtils, Controls, Types, Math, FPImage, FPCanvas,
+
+  // TEMP
+  Graphics, ImgList,
+
+  mungo.components.types,
   mungo.components.colors;
 
 type
@@ -14,26 +19,7 @@ type
   TButtonState = ( bsDefault, bsPressed, bsHover, bsAccent );
   TButtonStates = set of TButtonState;
 
-  TPositionData = record
-    Positon: TPoint;
-    HAlign: TAlignment;
-    VAlign: TTextLayout;
-  end;
-
-  TRectData = record
-    Rect: TRect;
-    HAlign: TAlignment;
-    VAlign: TTextLayout;
-  end;
-
-  TFontData = record
-    Name: String;
-    Size: Integer;
-    Color: TColor;
-    Style: TFontStyles;
-  end;
-
-  TBorderSide = ( bsLeft, bsTop, bsRight, bsBottom );
+{  TBorderData = array [ TBorderSide ] of TBorderStrokeData;
 
   TBorderStrokeData = record
     Strength: Integer;
@@ -45,8 +31,6 @@ type
     Color: TColor;
     Style: TBrushStyle;
   end;
-
-  TBorderData = array [ TBorderSide ] of TBorderStrokeData;
 
   TStateData = record
     Font: TFontData;
@@ -71,18 +55,18 @@ type
     Margin: array [ TBorderSide ] of Integer;
     States: array [ tsDefault..tsHover ] of TStateData;
   end;
-  PTabButtonTheme = ^TTabButtonTheme;
+  PTabButtonTheme = ^TTabButtonTheme;}
 
   TGlyphInstanceData = record
     Index: Integer;
-    Pos: TPositionData;
+    Pos: TPositioningData;
     Visible: Boolean;
   end;
 
   TCaptionInstanceData = record
     Text: String;
     Visible: Boolean;
-    Pos: TPositionData;
+    Pos: TPositioningData;
   end;
 
   { TControlInstanceData }
@@ -126,7 +110,7 @@ type
 
   TThemeBase = class ( TPersistent )
     public
-//      procedure RenderMenuItem( ACanvas: TCanvas; ARect: TRect; ACaption: TCaption; AStates: TOwnerDrawState ); virtual; abstract;
+      procedure RenderMenuItem( ACanvas: TCanvas; ARect: TRect; ACaption: TCaption; AStates: TButtonState ); virtual; abstract;
       procedure RenderBtn( ACanvas: TCanvas; AButton: TCustomButtonInstanceData ); virtual; abstract;
 
 //      procedure RenderTabBtn( ACanvas: TCanvas; AButton: TTabButtonInstanceData ); virtual; abstract;
@@ -282,6 +266,43 @@ type
           )
         )
       );
+      DefaultToggleButtonTheme: TTabButtonTheme = (
+        Margin: (
+          5, 2, 5, 2
+        );
+        States: (
+          ( //default
+            Font: ( Name: 'Roboto Condensed'; Size: 10; Color: Gray900; Style: []);
+            Fill: ( Color: Gray50; Style: bsSolid );
+            Border: (
+              ( Strength: 1; Color: Black; Style: psSolid ), // left
+              ( Strength: 1; Color: Black; Style: psSolid ), // top
+              ( Strength: 1; Color: Black; Style: psSolid ), // right
+              ( Strength: 1; Color: Black; Style: psSolid ) // bottom
+            )
+          ),
+          ( //active
+            Font: ( Name: 'Roboto Condensed'; Size: 10; Color: White; Style: []);
+            Fill: ( Color: Blue600; Style: bsSolid );
+            Border: (
+              ( Strength: 1; Color: Black; Style: psSolid ), // left
+              ( Strength: 1; Color: Black; Style: psSolid ), // top
+              ( Strength: 1; Color: Black; Style: psSolid ), // right
+              ( Strength: 1; Color: Black; Style: psSolid ) // bottom
+            )
+          ),
+          ( //hover
+            Font: ( Name: 'Roboto Condensed'; Size: 10; Color: Black; Style: []);
+            Fill: ( Color: Gray50; Style: bsSolid );
+            Border: (
+              ( Strength: 1; Color: Black; Style: psSolid ), // left
+              ( Strength: 1; Color: Black; Style: psSolid ), // top
+              ( Strength: 1; Color: Black; Style: psSolid ), // right
+              ( Strength: 1; Color: Black; Style: psSolid ) // bottom
+            )
+          )
+        )
+      );
 
       DefaultTabButtonTheme: TTabButtonTheme = (
         Margin: (
@@ -399,10 +420,11 @@ type
       CloseButtonTheme: TButtonTheme;
       TabSpecialButtonTheme: TButtonTheme;
       TabButtonTheme: TTabButtonTheme;
+      ToggleButtonTheme: TTabButtonTheme;
 
       constructor Create;
 
-//      procedure RenderMenuItem( ACanvas: TCanvas; ARect: TRect; ACaption: TCaption; AStates: TOwnerDrawState ); override;
+      procedure RenderMenuItem( ACanvas: TCanvas; ARect: TRect; ACaption: TCaption; AStates: TButtonState ); override;
       procedure RenderBtn( ACanvas: TCanvas; AButton: TCustomButtonInstanceData ); override;
 //      procedure RenderTabBtn( ACanvas: TCanvas; AButton: TTabButtonInstanceData ); override;
       procedure RenderTabBg( ACanvas: TCanvas ); override;
@@ -419,22 +441,22 @@ implementation
 uses
   mungo.components.base;
 
-function CalcAlignment( AWidthHeight: TSize; ADestRect: TRect; AHAlign: TAlignment; AVAlign: TTextLayout ): TPoint;
+function CalcAlignment( AWidthHeight: TSize; ADestRect: TRect; AHAlign: THorizontalAlign; AVAlign: TVerticalAlign ): TPoint;
 begin
   case AHAlign of
-    taLeftJustify:
+    haLeft:
       Result.X:= ADestRect.Left;
-    taCenter:
+    haCenter:
       Result.X:= ADestRect.Left + ( ADestRect.Width - AWidthHeight.Width ) div 2;
-    taRightJustify:
+    haRight:
       Result.X:= ADestRect.Left + ADestRect.Width - AWidthHeight.Width;
   end;
   case AVAlign of
-    tlTop:
+    vaTop:
       Result.Y:= ADestRect.Top;
-    tlCenter:
+    vaCenter:
       Result.Y:= ADestRect.Top + ( ADestRect.Height - AWidthHeight.Height ) div 2;
-    tlBottom:
+    vaBottom:
       Result.Y:= ADestRect.Top + ADestRect.Height - AWidthHeight.Height;
   end;
 end;
@@ -459,7 +481,7 @@ begin
       Font.Size:= ActiveStyle^.Font.Size;
       Font.Color:= ActiveStyle^.Font.Color;
       Font.Name:= ActiveStyle^.Font.Name;
-      Font.Style:= ActiveStyle^.Font.Style;
+      Font.Style:= Graphics.TFontStyles( ActiveStyle^.Font.Style );
 
       if ( Caption.Visible ) then
         if ( Glyph.Visible and Assigned( Images )) then begin
@@ -468,11 +490,11 @@ begin
           S.Height:= Max( S.Height, Images.Height );
           P:= CalcAlignment( S, ClientRect, Caption.Pos.HAlign, Caption.Pos.VAlign );
           case ( Glyph.Pos.HAlign ) of
-            taLeftJustify, taCenter: begin
+            haLeft, haCenter: begin
                 Glyph.Pos.Positon:= P;
                 Caption.Pos.Positon:= Point( P.X + Images.Width + 3, P.Y );
               end;
-            taRightJustify: begin
+            haRight: begin
                 Caption.Pos.Positon:= P;
                 Glyph.Pos.Positon:= Point( P.X + S.Width - Images.Width, P.Y );
               end;
@@ -540,7 +562,7 @@ begin
         ACanvas.Font.Size:= ActiveStyle^.Font.Size;
         ACanvas.Font.Color:= ActiveStyle^.Font.Color;
         ACanvas.Font.Name:= ActiveStyle^.Font.Name;
-        ACanvas.Font.Style:= ActiveStyle^.Font.Style;
+        ACanvas.Font.Style:= Graphics.TFontStyles( ActiveStyle^.Font.Style );
         ACanvas.Brush.Style:= bsClear;
 
         ACanvas.TextOut( AButton.Caption.Pos.Positon.X, AButton.Caption.Pos.Positon.Y, AButton.Caption.Text );
@@ -557,18 +579,18 @@ begin
   TabButtonTheme:= DefaultTabButtonTheme;
   CloseButtonTheme:= DefaultCloseButtonTheme;
   TabSpecialButtonTheme:= DefaultTabsSpecialButtonTheme;
+  ToggleButtonTheme:= DefaultToggleButtonTheme;
 end;
 
-{procedure TThemeDefault.RenderMenuItem(ACanvas: TCanvas; ARect: TRect;
-  ACaption: TCaption; AStates: TOwnerDrawState);
+procedure TThemeDefault.RenderMenuItem(ACanvas: TCanvas; ARect: TRect; ACaption: TCaption; AStates: TButtonState);
 var
   Style: TTextStyle;
 begin
   with ( ACanvas ) do begin
-{    if ( bsPressed in AStates ) then begin
+    if ( bsPressed = AStates ) then begin
       Brush.Color:= Gray900;
       Font.Color:= White;
-    end else }if ( odSelected in AStates ) then begin
+    end else if ( bsHover = AStates ) then begin
       Brush.Color:= Gray700;
       Font.Color:= White;
     end else begin
@@ -584,7 +606,7 @@ begin
   end;
 end;
 
-procedure TThemeDefault.RenderTabBtn(ACanvas: TCanvas; AButton: TCustomButtonInstanceData);
+{procedure TThemeDefault.RenderTabBtn(ACanvas: TCanvas; AButton: TCustomButtonInstanceData);
 begin
   with ( AButton ) do begin
     ACanvas.Brush.Color:= ActiveStyle^.Fill.Color;
@@ -617,7 +639,7 @@ begin
     Brush.Color:= Gray800;
     FillRect( ClientRect );
     Font.Color:= White;
-    Font.Style:= [ fsBold ];
+    Font.Style:= [ Graphics.fsBold ];
     Style:= TextStyle;
     Style.Alignment:= taCenter;
     Style.Layout:= tlCenter;
@@ -656,7 +678,7 @@ begin
     ACanvas.Font.Size:= Font.Size;
     ACanvas.Font.Color:= Font.Color;
     ACanvas.Font.Name:= Font.Name;
-    ACanvas.Font.Style:= Font.Style;
+    ACanvas.Font.Style:= Graphics.TFontStyles( Font.Style );
   end;
   Result:= TabButtonTheme.Margin[ bsLeft ] + TabButtonTheme.Margin[ bsRight ];
   if ( AButton.Glyph.Visible and Assigned( AButton.Images )) then
@@ -674,7 +696,7 @@ begin
     ACanvas.Font.Size:= Font.Size;
     ACanvas.Font.Color:= Font.Color;
     ACanvas.Font.Name:= Font.Name;
-    ACanvas.Font.Style:= Font.Style;
+    ACanvas.Font.Style:= Graphics.TFontStyles( Font.Style );
   end;
 
   Result.Width:= ButtonTheme.Margin[ bsLeft ] + ButtonTheme.Margin[ bsRight ];
@@ -695,6 +717,8 @@ begin
     Result:= @ButtonTheme
   else if ( ACtrl.InheritsFrom( TTabButton )) then
     Result:= @TabButtonTheme
+  else if ( ACtrl.InheritsFrom( TToggleButton )) then
+    Result:= @ToggleButtonTheme
   else
     Result:= nil;
 end;

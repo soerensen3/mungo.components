@@ -9,39 +9,65 @@
         <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
     </CompilerOptions>
-    <Files>
-      <Item>
-        <Filename Value="mungo.components.filebrowser.pas"/>
-        <HasRegisterProc Value="True"/>
-        <UnitName Value="mungo.components.filebrowser"/>
-      </Item>
-      <Item>
+    <Files Count="10">
+      <Item1>
         <Filename Value="mungo.components.base.pas"/>
-        <HasRegisterProc Value="True"/>
+        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="mungo.components.base"/>
-      </Item>
-      <Item>
+      </Item1>
+      <Item2>
         <Filename Value="mungo.components.colors.pas"/>
         <UnitName Value="mungo.components.colors"/>
-      </Item>
-      <Item>
+      </Item2>
+      <Item3>
+        <Filename Value="mungo.components.filebrowser.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="mungo.components.filebrowser"/>
+      </Item3>
+      <Item4>
+        <Filename Value="mungo.components.pas"/>
+        <UnitName Value="mungo.components"/>
+      </Item4>
+      <Item5>
         <Filename Value="mungo.components.themes.pas"/>
+        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="mungo.components.themes"/>
-      </Item>
+      </Item5>
+      <Item6>
+        <Filename Value="mungo.components.types.pas"/>
+        <UnitName Value="mungo.components.types"/>
+      </Item6>
+      <Item7>
+        <Filename Value="mungo.components.renderer.pas"/>
+        <UnitName Value="mungo.components.renderer"/>
+      </Item7>
+      <Item8>
+        <Filename Value="mungo.components.geometry.pas"/>
+        <UnitName Value="mungo.components.geometry"/>
+      </Item8>
+      <Item9>
+        <Filename Value="mungo.components.styles.pas"/>
+        <UnitName Value="mungo.components.styles"/>
+      </Item9>
+      <Item10>
+        <Filename Value="mungo.components.widget.pas"/>
+        <UnitName Value="mungo.components.widget"/>
+      </Item10>
     </Files>
-    <RequiredPkgs>
-      <Item>
+    <CompatibilityMode Value="True"/>
+    <RequiredPkgs Count="4">
+      <Item1>
+        <PackageName Value="pascal3d_math"/>
+      </Item1>
+      <Item2>
         <PackageName Value="laz.virtualtreeview_package"/>
-      </Item>
-      <Item>
-        <PackageName Value="mungo.intf"/>
-      </Item>
-      <Item>
+      </Item2>
+      <Item3>
         <PackageName Value="LCLBase"/>
-      </Item>
-      <Item>
-        <PackageName Value="FCL"/>
-      </Item>
+      </Item3>
+      <Item4>
+        <PackageName Value="mungo.intf"/>
+      </Item4>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

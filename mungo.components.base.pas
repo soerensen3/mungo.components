@@ -6,31 +6,32 @@ unit mungo.components.base;
 interface
 
 uses
-  Classes, SysUtils, Controls, Graphics, Types, Math,
-  ExtCtrls,
+  Classes, SysUtils, Types, Math,
 
   mungo.intf.editor,
+  mungo.intf.action,
   mungo.components.colors,
-  mungo.components.themes,
+  mungo.components.styles,
+  mungo.components.types,
 
-  Forms, Menus, fgl, LCLType, ImgList;
+  Forms, Menus, fgl, LCLType, ImgList, Controls, Graphics, ExtCtrls;
 
 type
-  { TThemedControl }
+  { TWidget }
 
-  TThemedControl = class ( TCustomControl )
+  TWidgetLCL = class ( TCustomControl )
     private
       FId: String;
       FImages: TCustomImageList;
       FNeedsUpdate: Boolean;
-      FTheme: TThemeBase;
-      function GetTheme: TThemeBase;
+      FTheme: TStyleSheet;
+      function GetStyle: TStyleSheet;
       procedure ApplyThemeOfOwner( AOwner: TComponent );
 
     protected
       procedure SetId(AValue: String); virtual;
       procedure SetImages(AValue: TCustomImageList); virtual;
-      procedure SetTheme(AValue: TThemeBase); virtual;
+      procedure SetStyle(AValue: TStyleSheet); virtual;
 
       property NeedsUpdate: Boolean read FNeedsUpdate;
 
@@ -38,7 +39,7 @@ type
       constructor Create(AOwner: TComponent); override;
 
     published
-      property Theme: TThemeBase read GetTheme write SetTheme;
+      property StyleSheet: TStyleSheet read GetStyle write SetStyle;
       property Images: TCustomImageList read FImages write SetImages;
       property Id: String read FId write SetId;
       property Visible;
@@ -50,9 +51,21 @@ type
       property AutoSize;
   end;
 
+  { TCustomWidget }
+
+  generic TCustomWidget < TState > = class ( TWidget )
+    private
+      FWidgetState: TState;
+
+      procedure SetWidgetState(AValue: TState);
+
+    published
+      property WidgetState: TState read FWidgetState write SetWidgetState;
+  end;
+
   { THeaderControl }
 
-  THeaderControl = class ( TThemedControl )
+  THeaderControl = class ( TWidget )
     private
       FForm: TForm;
       procedure CloseBtnClick(Sender: TObject);
@@ -71,7 +84,7 @@ type
   TTabNotifyEvent = procedure( ATab: TTabButton ) of object;
   { TTabControl }
 
-  TTabControl = class ( TThemedControl )
+  TTabControl = class ( TWidget )
     private
       FActiveTab: TTabButton;
       FOnTabActivate: TTabNotifyEvent;
@@ -121,7 +134,7 @@ type
 
   { TPageControl }
 
-  TPageControl = class ( TThemedControl )
+  TPageControl = class ( TWidget )
     private
       FActivePage: Integer;
       FPages: TPageList;
@@ -131,7 +144,7 @@ type
       procedure OnScrollRightClick(Sender: TObject);
       procedure SetActivePage(AValue: Integer);
       procedure TabActivate(ATab: TTabButton);
-      procedure SetTheme(AValue: TThemeBase); override;
+      procedure SetStyle(AValue: TStyleSheet); override;
 
     public
       constructor Create(AOwner: TComponent); override;
@@ -151,34 +164,34 @@ type
 
   { TCustomButton }
 
-  TCustomButton = class abstract ( TThemedControl, IFPObserver )
+  TCustomButton = class abstract ( TWidget, IFPObserver )
     private
       FAction: TAction;
       FButtonInstance: TCustomButtonInstanceData;
 
       function GetCaption: String;
-      function GetCaptionHAlign: TAlignment;
-      function GetCaptionVAlign: TTextLayout;
+      function GetCaptionHAlign: THorizontalAlign;
+      function GetCaptionVAlign: TVerticalAlign;
       function GetCaptionVisible: Boolean;
-      function GetGlyphHAlign: TAlignment;
+      function GetGlyphHAlign: THorizontalAlign;
       function GetGlyphIndex: Integer;
       function GetGlyphVisible: Boolean;
       procedure SetAction(AValue: TAction); reintroduce;
       procedure SetId(AValue: String); override;
       procedure SetCaption(AValue: String); virtual;
-      procedure SetCaptionHAlign(AValue: TAlignment);
-      procedure SetCaptionVAlign(AValue: TTextLayout);
-      procedure SetGlyphHAlign(AValue: TAlignment);
+      procedure SetCaptionHAlign(AValue: THorizontalAlign);
+      procedure SetCaptionVAlign(AValue: TVerticalAlign);
+      procedure SetGlyphHAlign(AValue: THorizontalAlign);
       procedure SetGlyphIndex(AValue: Integer);
       procedure SetGlyphVisible(AValue: Boolean);
       procedure SetShowGlyph(AValue: Boolean);
       procedure SetCaptionVisible(AValue: Boolean);
-      procedure SetTheme(AValue: TThemeBase); override;
+      procedure SetStyle(AValue: TStyleSheet); override;
       procedure SetImages(AValue: TCustomImageList); override;
       procedure UpdateActiveStyle; virtual;
       procedure UpdateInstance; virtual;
       procedure UpdateTheme; virtual;
-      procedure ApplyAction( AAction: TAction );
+      procedure ApplyAction( AAction: TAction ); virtual;
       procedure FPOObservedChanged(ASender : TObject; Operation : TFPObservedOperation; Data : Pointer);
       procedure Click; override;
 
@@ -195,9 +208,9 @@ type
       property ShowImage: Boolean read GetGlyphVisible write SetGlyphVisible;
       property ShowCaption: Boolean read GetCaptionVisible write SetCaptionVisible;
       property Caption: String read GetCaption write SetCaption;
-      property GlyphAlignment: TAlignment read GetGlyphHAlign write SetGlyphHAlign;
-      property CaptionHAlignment: TAlignment read GetCaptionHAlign write SetCaptionHAlign;
-      property CaptionVAlignment: TTextLayout read GetCaptionVAlign write SetCaptionVAlign;
+      property GlyphAlignment: THorizontalAlign read GetGlyphHAlign write SetGlyphHAlign;
+      property CaptionHAlignment: THorizontalAlign read GetCaptionHAlign write SetCaptionHAlign;
+      property CaptionVAlignment: TVerticalAlign read GetCaptionVAlign write SetCaptionVAlign;
       property Action: TAction read FAction write SetAction;
   end;
 
@@ -226,6 +239,34 @@ type
       property Accent: Boolean read GetAccent write SetAccent;
       property State: TButtonStates read GetState;
   end;
+
+  { TToggleButton }
+
+  TToggleButton = class ( TCustomButton )
+    private
+      function GetAccent: Boolean;
+      function GetDown: Boolean;
+      function GetState: TTabStates;
+      procedure SetAccent(AValue: Boolean);
+      procedure SetDown(AValue: Boolean);
+      procedure ApplyAction(AAction: TAction); override;
+//      procedure CalculatePreferredSize(var PreferredWidth, PreferredHeight: integer; WithThemeSpace: Boolean); override;
+
+    public
+      constructor Create(AOwner: TComponent); override;
+      constructor CreateFromAction( AOwner: TComponent; AAction: TAction );
+      destructor Destroy; override;
+
+      procedure MouseEnter; override;
+      procedure MouseLeave; override;
+      procedure Click; override;
+
+    published
+      property Accent: Boolean read GetAccent write SetAccent;
+      property Down: Boolean read GetDown write SetDown;
+      property State: TTabStates read GetState;
+  end;
+
 
 
   { TTabButton }
@@ -256,8 +297,7 @@ type
       procedure MouseEnter; override;
       procedure MouseLeave; override;
       procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
-      procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-        override;
+      procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
 
       procedure UpdateSize;
 //      procedure CalculatePreferredSize(var PreferredWidth, PreferredHeight: integer; WithThemeSpace: Boolean); override;
@@ -278,7 +318,7 @@ type
 
   TSpacer = class ( TCustomControl )
     private
-      FCtrl: TThemedControl;
+      FCtrl: TWidget;
       FDrawLine: Boolean;
 
     public
@@ -286,13 +326,13 @@ type
       procedure Paint; override;
 
     published
-      property Ctrl: TThemedControl read FCtrl write FCtrl;
+      property Ctrl: TWidget read FCtrl write FCtrl;
       property DrawLine: Boolean read FDrawLine write FDrawLine;
   end;
 
   { TToolbar }
 
-  TToolbar = class ( TThemedControl )
+  TToolbar = class ( TWidget )
     private
       FButtonWidth: Integer;
       FLeftAligned: Boolean;
@@ -305,6 +345,7 @@ type
       procedure AddCtrl( ACtrl: TWinControl );
       function AddButton( ACaption: String; const AHint: String = ''; const AImageIndex: Integer = -1 ): TButton;
       function AddButton( AAction: TAction ): TButton;
+      function AddToggleButton( AAction: TToggleAction ): TToggleButton;
       function AddSpacer(): TSpacer;
 
       procedure Paint; override;
@@ -317,16 +358,39 @@ type
 
   TFlatPopupMenu = class ( TPopupMenu )
     private
-      FTheme: TThemeBase;
+      FTheme: TStyleSheet;
 
       procedure DrawMenuItem(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
         AState: TOwnerDrawState);
-      procedure SetTheme(AValue: TThemeBase);
+      procedure SetStyle(AValue: TStyleSheet);
 
     public
       constructor Create(AOwner: TComponent); override;
 
-      property Theme: TThemeBase read FTheme write SetTheme;
+      property StyleSheet: TStyleSheet read FTheme write SetStyle;
+  end;
+
+  { TCollapsePanel }
+
+  TCollapsePanel = class ( TWidget )
+    protected
+      FChildPanel: TPanel;
+      FCollapseButton: TButton;
+      FStoredSize: TPoint;
+
+      function GetCollapsed: Boolean;
+      procedure SetCollapsed(AValue: Boolean);
+      procedure UpdateButton;
+      procedure SetAlign(Value: TAlign); override;
+      procedure CollapseButtonClick(Sender: TObject);
+
+    public
+      constructor Create(AOwner: TComponent); override;
+
+    published
+      property ChildPanel: TPanel read FChildPanel;
+      property CollapseButton: TButton read FCollapseButton;
+      property Collapsed: Boolean read GetCollapsed write SetCollapsed;
   end;
 
   procedure Register;
@@ -341,6 +405,97 @@ begin
   RegisterComponents( 'mungo', [ TButton, TPageControl, TTabControl, TSpacer, TTabButton, TToolbar ]);
 end;
 
+{ TCustomWidget }
+
+procedure TCustomWidget.SetWidgetState(AValue: TState);
+begin
+  if FWidgetState=AValue then Exit;
+  FWidgetState:=AValue;
+end;
+
+{ TCollapsePanel }
+
+procedure TCollapsePanel.CollapseButtonClick(Sender: TObject);
+begin
+  Collapsed:= not Collapsed;
+end;
+
+function TCollapsePanel.GetCollapsed: Boolean;
+begin
+  Result:= not FChildPanel.Visible;
+end;
+
+procedure TCollapsePanel.SetCollapsed(AValue: Boolean);
+begin
+  if ( GetCollapsed = AValue ) then
+    exit;
+
+  if ( AValue ) then begin
+    FChildPanel.Visible:= False;
+    Width:= 7;
+    Height:= 7;
+  end else begin
+    Width:= FChildPanel.Width;
+    Height:= FChildPanel.Height;
+    FChildPanel.Visible:= True;
+  end;
+
+  UpdateButton;
+end;
+
+procedure TCollapsePanel.UpdateButton;
+begin
+  case Align of
+    alLeft, alClient, alNone, alCustom: begin
+      FCollapseButton.Align:= alRight;
+      FCollapseButton.Caption:= BoolToStr( Collapsed, '▸', '◂' );
+      FCollapseButton.Width:= 7;
+    end;
+
+    alRight: begin
+      FCollapseButton.Align:= alLeft;
+      FCollapseButton.Caption:= BoolToStr( not Collapsed, '▸', '◂' );
+      FCollapseButton.Width:= 7;
+    end;
+
+    alTop: begin
+      FCollapseButton.Align:= alBottom;
+      FCollapseButton.Caption:= BoolToStr( Collapsed, '▾', '▴' );
+      FCollapseButton.Height:= 7;
+    end;
+
+    alBottom: begin
+      FCollapseButton.Align:= alTop;
+      FCollapseButton.Caption:= BoolToStr( not Collapsed, '▾', '▴' );
+      FCollapseButton.Height:= 7;
+    end;
+  end;
+end;
+
+procedure TCollapsePanel.SetAlign(Value: TAlign);
+begin
+  inherited SetAlign(Value);
+  UpdateButton;
+end;
+
+constructor TCollapsePanel.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+
+  FChildPanel:= TPanel.Create( Self );
+  FChildPanel.Parent:= Self;
+  FChildPanel.Align:= alClient;
+  FChildPanel.BevelOuter:= bvNone;
+
+  FCollapseButton:= TButton.Create( Self );
+  FCollapseButton.Parent:= Self;
+  FCollapseButton.Align:= alRight;
+  FCollapseButton.Width:= 10;
+  FCollapseButton.OnClick:=@CollapseButtonClick;
+
+  UpdateButton;
+end;
+
 
 { TSpacer }
 
@@ -352,8 +507,8 @@ end;
 
 procedure TSpacer.Paint;
 begin
-  if ( DrawLine and Assigned( Ctrl ) and Assigned( Ctrl.Theme )) then
-    Ctrl.Theme.RenderSpacer( Canvas );
+  if ( DrawLine and Assigned( Ctrl ) and Assigned( Ctrl.StyleSheet )) then
+    Ctrl.StyleSheet.RenderSpacer( Canvas );
 end;
 
 { TToolbar }
@@ -412,6 +567,19 @@ begin
   Result.ShowHint:= True;
 end;
 
+function TToolbar.AddToggleButton(AAction: TToggleAction): TToggleButton;
+begin
+  Result:= TToggleButton.Create( Self );
+  if ( LeftAligned ) then
+    Result.Left:= ControlCount
+  else
+    Result.Left:= Width - ControlCount;
+  Result.Action:= AAction;
+  Result.Width:= ButtonWidth;
+  AddCtrl( Result );
+  Result.ShowHint:= True;
+end;
+
 function TToolbar.AddSpacer(): TSpacer;
 begin
   Result:= TSpacer.Create( Self );
@@ -427,20 +595,26 @@ end;
 
 procedure TToolbar.Paint;
 begin
-  if ( Assigned( Theme )) then
-    Theme.RenderToolbarBg( Canvas );
+  if ( Assigned( StyleSheet )) then
+    StyleSheet.RenderToolbarBg( Canvas );
 end;
 
 { TFlatPopupMenu }
 
 procedure TFlatPopupMenu.DrawMenuItem(Sender: TObject; ACanvas: TCanvas;
   ARect: TRect; AState: TOwnerDrawState);
+var
+  buttonstate: TButtonState;
 begin
-//  if ( Assigned( Theme )) then
-//    Theme.RenderMenuItem( ACanvas, ARect, TMenuItem( Sender ).Caption, AState );
+  if ( odSelected in AState ) then
+    buttonstate:= bsHover
+  else
+    buttonstate:= bsDefault;
+  if ( Assigned( StyleSheet )) then
+    StyleSheet.RenderMenuItem( ACanvas, ARect, TMenuItem( Sender ).Caption, buttonstate );
 end;
 
-procedure TFlatPopupMenu.SetTheme(AValue: TThemeBase);
+procedure TFlatPopupMenu.SetStyle(AValue: TStyleSheet);
 begin
   if FTheme=AValue then Exit;
   FTheme:=AValue;
@@ -453,37 +627,37 @@ begin
   OnDrawItem:=@DrawMenuItem;
 end;
 
-{ TThemedControl }
+{ TWidget }
 
-procedure TThemedControl.SetTheme(AValue: TThemeBase);
+procedure TWidget.SetStyle(AValue: TStyleSheet);
 begin
   if FTheme=AValue then Exit;
   FTheme:=AValue;
 end;
 
-procedure TThemedControl.ApplyThemeOfOwner(AOwner: TComponent);
+procedure TWidget.ApplyThemeOfOwner(AOwner: TComponent);
 var
   O: TComponent;
 begin
   O:= AOwner;
   while Assigned( O ) do begin
-    if ( O is TThemedControl ) then begin
-      Theme:= TThemedControl( O ).Theme;
-      Images:= TThemedControl( O ).Images;
+    if ( O is TWidget ) then begin
+      StyleSheet:= TWidget( O ).StyleSheet;
+      Images:= TWidget( O ).Images;
       O:= nil;
     end else
       O:= O.Owner;
   end;
 end;
 
-constructor TThemedControl.Create(AOwner: TComponent);
+constructor TWidget.Create(AOwner: TComponent);
 begin
   ApplyThemeOfOwner( AOwner );
   inherited Create(AOwner);
   FNeedsUpdate:= True;
 end;
 
-function TThemedControl.GetTheme: TThemeBase;
+function TWidget.GetStyle: TStyleSheet;
 begin
   if ( Assigned( FTheme )) then
     Result:= FTheme
@@ -491,13 +665,13 @@ begin
     Result:= DefaultTheme;
 end;
 
-procedure TThemedControl.SetId(AValue: String);
+procedure TWidget.SetId(AValue: String);
 begin
   if FId=AValue then Exit;
   FId:=AValue;
 end;
 
-procedure TThemedControl.SetImages(AValue: TCustomImageList);
+procedure TWidget.SetImages(AValue: TCustomImageList);
 begin
   if FImages=AValue then Exit;
   FImages:=AValue;
@@ -514,10 +688,10 @@ begin
   ActivePage:= n;
 end;
 
-procedure TPageControl.SetTheme(AValue: TThemeBase);
+procedure TPageControl.SetStyle(AValue: TStyleSheet);
 begin
-  inherited SetTheme(AValue);
-  FTabs.Theme:= AValue;
+  inherited SetStyle(AValue);
+  FTabs.StyleSheet:= AValue;
 end;
 
 procedure TPageControl.SetActivePage(AValue: Integer);
@@ -665,12 +839,12 @@ begin
   Result:= FButtonInstance.Caption.Text;
 end;
 
-function TCustomButton.GetCaptionHAlign: TAlignment;
+function TCustomButton.GetCaptionHAlign: THorizontalAlign;
 begin
   Result:= FButtonInstance.Caption.Pos.HAlign;
 end;
 
-function TCustomButton.GetCaptionVAlign: TTextLayout;
+function TCustomButton.GetCaptionVAlign: TVerticalAlign;
 begin
   Result:= FButtonInstance.Caption.Pos.VAlign;
 end;
@@ -680,7 +854,7 @@ begin
   Result:= FButtonInstance.Caption.Visible;
 end;
 
-function TCustomButton.GetGlyphHAlign: TAlignment;
+function TCustomButton.GetGlyphHAlign: THorizontalAlign;
 begin
   Result:= FButtonInstance.Glyph.Pos.HAlign;
 end;
@@ -722,21 +896,21 @@ begin
 //  AdjustSize;
 end;
 
-procedure TCustomButton.SetCaptionHAlign(AValue: TAlignment);
+procedure TCustomButton.SetCaptionHAlign(AValue: THorizontalAlign);
 begin
   FButtonInstance.Caption.Pos.HAlign:= AValue;
   if ( FButtonInstance.Caption.Visible ) then
     UpdateInstance;
 end;
 
-procedure TCustomButton.SetCaptionVAlign(AValue: TTextLayout);
+procedure TCustomButton.SetCaptionVAlign(AValue: TVerticalAlign);
 begin
   FButtonInstance.Caption.Pos.VAlign:= AValue;
   if ( FButtonInstance.Caption.Visible ) then
     UpdateInstance;
 end;
 
-procedure TCustomButton.SetGlyphHAlign(AValue: TAlignment);
+procedure TCustomButton.SetGlyphHAlign(AValue: THorizontalAlign);
 begin
   FButtonInstance.Glyph.Pos.HAlign:= AValue;
   if ( FButtonInstance.Glyph.Visible ) then
@@ -776,7 +950,7 @@ begin
   UpdateInstance;
 end;
 
-procedure TCustomButton.SetTheme(AValue: TThemeBase);
+procedure TCustomButton.SetStyle(AValue: TStyleSheet);
 begin
   if FTheme=AValue then Exit;
   FTheme:=AValue;
@@ -789,13 +963,13 @@ begin
   //ControlStyle := [csAcceptsControls, csNoFocus];
   Height:= 30;
   Width:= 50;
-  ShowImage:= True;
+  ShowImage:= False;
   ShowCaption:= True;
 
-  FButtonInstance.Caption.Pos.HAlign:= taCenter;
-  FButtonInstance.Caption.Pos.VAlign:= tlCenter;
-  FButtonInstance.Glyph.Pos.HAlign:= taCenter;
-  FButtonInstance.Glyph.Pos.VAlign:= tlCenter;
+  FButtonInstance.Caption.Pos.HAlign:= haCenter;
+  FButtonInstance.Caption.Pos.VAlign:= vaCenter;
+  FButtonInstance.Glyph.Pos.HAlign:= haCenter;
+  FButtonInstance.Glyph.Pos.VAlign:= vaCenter;
 end;
 
 destructor TCustomButton.Destroy;
@@ -826,16 +1000,16 @@ procedure TCustomButton.Paint;
 begin
   if ( NeedsUpdate ) then
     UpdateInstance;
-  if ( Assigned( Theme )) then begin
+  if ( Assigned( StyleSheet )) then begin
     FButtonInstance.Images:= Images;
-    Theme.RenderBtn( Canvas, FButtonInstance );
+    StyleSheet.RenderBtn( Canvas, FButtonInstance );
   end;
 end;
 
 procedure TCustomButton.UpdateTheme;
 begin
-  if ( Assigned( Theme )) then begin
-    FButtonInstance.ActiveTheme:= Theme.GetThemeForCtrl( TControlClass( ClassType ), Id );
+  if ( Assigned( StyleSheet )) then begin
+    FButtonInstance.ActiveTheme:= StyleSheet.GetThemeForCtrl( TControlClass( ClassType ), Id );
     UpdateActiveStyle;
   end else begin
     FButtonInstance.ActiveTheme:= DefaultTheme.GetThemeForCtrl( TControlClass( ClassType ), Id );
@@ -883,8 +1057,8 @@ var
 begin
   if (Parent = nil) or (not Parent.HandleAllocated) then Exit;
 
-  if ( AutoSize and Assigned( Theme )) then begin
-    Sz:= Theme.GetBtnSize( Canvas, TButtonInstanceData( FButtonInstance ));
+  if ( AutoSize and Assigned( StyleSheet )) then begin
+    Sz:= StyleSheet.GetBtnSize( Canvas, TButtonInstanceData( FButtonInstance ));
     PreferredWidth:= Sz.Width;
     PreferredHeight:= Sz.Height;
   end;
@@ -959,6 +1133,95 @@ begin
   inherited Destroy;
 end;
 
+{ TToggleButton }
+
+procedure TToggleButton.MouseEnter;
+begin
+  inherited MouseEnter;
+  TButtonInstanceData( FButtonInstance ).State:= TButtonInstanceData( FButtonInstance ).State + [ bsHover ];
+  UpdateActiveStyle;
+end;
+
+procedure TToggleButton.MouseLeave;
+begin
+  inherited MouseLeave;
+  TButtonInstanceData( FButtonInstance ).State:= TButtonInstanceData( FButtonInstance ).State - [ bsHover ];
+  UpdateActiveStyle;
+end;
+
+procedure TToggleButton.Click;
+begin
+  inherited Click;
+  if ( Action is TToggleAction ) then
+    Down:= TToggleAction( Action ).Toggled
+  else
+    Down:= not Down;
+
+  UpdateActiveStyle;
+end;
+
+function TToggleButton.GetAccent: Boolean;
+begin
+  Result:= False; //tsAccent in State;
+end;
+
+function TToggleButton.GetDown: Boolean;
+begin
+  Result:= tsActive in State;
+end;
+
+function TToggleButton.GetState: TTabStates;
+begin
+  Result:= TTabButtonInstanceData( FButtonInstance ).State;
+end;
+
+procedure TToggleButton.SetAccent(AValue: Boolean);
+begin
+  {if ( AValue ) then
+    TButtonInstanceData( FButtonInstance ).State:= TButtonInstanceData( FButtonInstance ).State + [ bsAccent ]
+  else
+    TButtonInstanceData( FButtonInstance ).State:= TButtonInstanceData( FButtonInstance ).State - [ bsAccent ];
+  UpdateActiveStyle;}
+end;
+
+procedure TToggleButton.SetDown(AValue: Boolean);
+begin
+  if ( AValue ) then
+    TTabButtonInstanceData( FButtonInstance ).State:= State + [ tsActive ]
+  else
+    TTabButtonInstanceData( FButtonInstance ).State:= State - [ tsActive ];
+  if ( Action is TToggleAction ) then
+    TToggleAction( Action ).Toggled:= Down;
+end;
+
+procedure TToggleButton.ApplyAction(AAction: TAction);
+begin
+  inherited ApplyAction(AAction);
+  if ( AAction is TToggleAction ) then
+    Down:= TToggleAction( Action ).Toggled;
+end;
+
+constructor TToggleButton.Create(AOwner: TComponent);
+begin
+  FButtonInstance:= TTabButtonInstanceData.Create;
+  inherited Create(AOwner);
+
+  UpdateTheme;
+  UpdateInstance;
+end;
+
+constructor TToggleButton.CreateFromAction(AOwner: TComponent; AAction: TAction);
+begin
+
+end;
+
+destructor TToggleButton.Destroy;
+begin
+  FreeAndNil( FButtonInstance );
+  inherited Destroy;
+end;
+
+
 
 { THeaderControl }
 
@@ -1029,8 +1292,8 @@ begin
     Cap:= FForm.Caption
   else
     Cap:= 'No Form assigned!';
-  if ( Assigned( Theme )) then
-    Theme.RenderHeaderBg( Canvas, Cap );
+  if ( Assigned( StyleSheet )) then
+    StyleSheet.RenderHeaderBg( Canvas, Cap );
 end;
 
 { TTabButton }
@@ -1063,7 +1326,7 @@ end;
 procedure TTabButton.UpdateTheme;
 begin
   inherited UpdateTheme;
-  FCloseButtonInstance.ActiveTheme:= Theme.GetThemeForCtrl( TButton, 'closebutton' );
+  FCloseButtonInstance.ActiveTheme:= StyleSheet.GetThemeForCtrl( TButton, 'closebutton' );
   FCloseButtonInstance.ActiveStyle:= FCloseButtonInstance.GetActiveState;
 end;
 
@@ -1074,8 +1337,8 @@ begin
 //  OldWidth := Width;
 //  InvalidatePreferredSize;
 //  AdjustSize;
-  if ( Assigned( Theme )) then
-    Width:= Theme.GetTabWidth( Canvas, TTabButtonInstanceData( FButtonInstance ));
+  if ( Assigned( StyleSheet )) then
+    Width:= StyleSheet.GetTabWidth( Canvas, TTabButtonInstanceData( FButtonInstance ));
 end;
 
 function TTabButton.GetDown: Boolean;
@@ -1097,8 +1360,8 @@ end;
 {procedure TTabButton.CalculatePreferredSize(var PreferredWidth, PreferredHeight: integer; WithThemeSpace: Boolean);
 begin
   //inherited CalculatePreferredSize(PreferredWidth, PreferredHeight, WithThemeSpace);
-  //if ( Assigned( Theme ) and AutoSize ) then
-  //  PreferredWidth:= Theme.GetTabWidth( Canvas, TTabButtonInstanceData( FButtonInstance ));
+  //if ( Assigned( StyleSheet ) and AutoSize ) then
+  //  PreferredWidth:= StyleSheet.GetTabWidth( Canvas, TTabButtonInstanceData( FButtonInstance ));
 end;}
 
 constructor TTabButton.Create(AOwner: TComponent);
@@ -1107,8 +1370,8 @@ begin
   FCloseButtonInstance:= TButtonInstanceData.Create;
   with ( TButtonInstanceData( FCloseButtonInstance )) do begin
     FCloseButtonInstance.Caption.Text:= '🗙';
-    FCloseButtonInstance.Caption.Pos.HAlign:= taCenter;
-    FCloseButtonInstance.Caption.Pos.VAlign:= tlCenter;
+    FCloseButtonInstance.Caption.Pos.HAlign:= haCenter;
+    FCloseButtonInstance.Caption.Pos.VAlign:= vaCenter;
     FCloseButtonInstance.Caption.Visible:= True;
     FCloseButtonInstance.Glyph.Visible:= False;
     FCloseButtonInstance.State:= FCloseButtonInstance.State + [ bsAccent ];
@@ -1215,10 +1478,10 @@ end;
 
 procedure TTabButton.Paint;
 begin
-  if ( Assigned( Theme )) then begin
-    Theme.RenderBtn( Canvas, FButtonInstance );
+  if ( Assigned( StyleSheet )) then begin
+    StyleSheet.RenderBtn( Canvas, FButtonInstance );
     if ( ShowCloseButton ) then
-      Theme.RenderBtn( Canvas, FCloseButtonInstance );
+      StyleSheet.RenderBtn( Canvas, FCloseButtonInstance );
   end;
 end;
 
@@ -1316,8 +1579,8 @@ end;}
 
 procedure TTabControl.Paint;
 begin
-  if ( Assigned( Theme )) then
-    Theme.RenderTabBg( Canvas );
+  if ( Assigned( StyleSheet )) then
+    StyleSheet.RenderTabBg( Canvas );
 end;
 
 
