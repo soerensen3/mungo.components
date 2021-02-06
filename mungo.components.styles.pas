@@ -23,6 +23,7 @@ type
 
   TRenderStyle = class ( specialize TFPGObjectList < TRenderer >)
     procedure Render( AGeometry: TGeometry );
+    procedure Render( AWidgetContext: TWidgetContext );
     procedure Render( ACanvas: TObject; APosition: TVec2; ACaption: String );
     procedure CalculateParams( ACanvas: TObject; AGeometry: TGeometry );
     //procedure Render( ACanvas: TObject; ACache: TRenderStyleCache );
@@ -46,9 +47,21 @@ implementation
 procedure TRenderStyle.Render(AGeometry: TGeometry);
 var
   Renderer: TRenderer;
+  i: Integer;
 begin
-  for Renderer in Self do
-    Renderer.RenderGeometry( AGeometry );
+  // TEMP
+  if ( AGeometry is TGeometryText ) then
+    Self[ Count - 1 ].RenderGeometry( AGeometry )
+  else
+    for i:= 0 to Count - 2 do
+      Self[ i ].RenderGeometry( AGeometry )
+  {for Renderer in Self do
+    Renderer.RenderGeometry( AGeometry );}
+end;
+
+procedure TRenderStyle.Render(AWidgetContext: TWidgetContext);
+begin
+  //
 end;
 
 procedure TRenderStyle.Render(ACanvas: TObject; APosition: TVec2;

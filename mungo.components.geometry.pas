@@ -7,6 +7,8 @@ interface
 uses
   Classes, SysUtils,
 
+  maki.node,
+
   mungo.components.types,
 
   p3d.math;
@@ -16,7 +18,7 @@ type
 
   { TGeometry }
 
-  TGeometry = class abstract
+  TGeometry = class abstract ( TNode )
     private
       FContext: TWidgetContext;
 

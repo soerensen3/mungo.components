@@ -55,19 +55,22 @@
       </Item10>
     </Files>
     <CompatibilityMode Value="True"/>
-    <RequiredPkgs Count="4">
+    <RequiredPkgs Count="5">
       <Item1>
-        <PackageName Value="pascal3d_math"/>
+        <PackageName Value="maki"/>
       </Item1>
       <Item2>
-        <PackageName Value="laz.virtualtreeview_package"/>
+        <PackageName Value="pascal3d_math"/>
       </Item2>
       <Item3>
-        <PackageName Value="LCLBase"/>
+        <PackageName Value="laz.virtualtreeview_package"/>
       </Item3>
       <Item4>
-        <PackageName Value="mungo.intf"/>
+        <PackageName Value="LCLBase"/>
       </Item4>
+      <Item5>
+        <PackageName Value="mungo.intf"/>
+      </Item5>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

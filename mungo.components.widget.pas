@@ -9,6 +9,10 @@ uses
 
   Math,
 
+  fgl,
+
+  maki.node,
+
   mungo.components.types,
   mungo.components.geometry,
   mungo.components.styles,
@@ -81,7 +85,200 @@ type
       property Height: Float index 3 read GetDim write SetDim;
   end;
 
+  TWidgetAlignBox = ( waFill, waStart, waCenter, waEnd );
+
+  { TWidgetSlot }
+
+  TWidgetSlot = class abstract
+    private
+      FWidget: TWidget;
+
+      procedure SetWidget(AValue: TWidget);
+
+    public
+      destructor Destroy; override;
+
+      procedure UpdateWidgetDimensions( var ASlotSize: TRectF ); virtual; abstract;
+
+    published
+      property Widget: TWidget read FWidget write SetWidget;
+  end;
+
+  { TWidgetSlotBox }
+
+  TWidgetSlotBox = class ( TWidgetSlot )
+    private
+      FAlign: TWidgetAlignBox;
+      FMarginEnd: Float;
+      FMarginStart: Float;
+
+      procedure SetAlign(AValue: TWidgetAlignBox);
+      procedure SetMarginEnd(AValue: Float);
+      procedure SetMarginStart(AValue: Float);
+
+    public
+      procedure UpdateWidgetDimensions( var ASlotSize: TRectF ); override;
+
+      property Align: TWidgetAlignBox read FAlign write SetAlign;
+      property MarginStart: Float read FMarginStart write SetMarginStart;
+      property MarginEnd: Float read FMarginEnd write SetMarginEnd;
+  end;
+
+  { TWidgetSlotList }
+
+  generic TWidgetSlotList < TWidgetSlotType: TWidgetSlot > = class ( specialize TFPGObjectList < TWidgetSlotType >)
+    public
+      function AddWidget( AWidget: TWidget ): Integer;
+      procedure RemoveWidget( AWidget: TWidget );
+  end;
+
+  { TWidgetContainer }
+
+  generic TWidgetContainer < TWidgetSlotType: TWidgetSlot > = class abstract
+    private type
+      TCustomWidgetSlotList = specialize TWidgetSlotList<TWidgetSlotType>;
+
+    private
+      FRect: TRectF;
+      FSlots: TCustomWidgetSlotList;
+
+    public
+      constructor Create;
+      destructor Destroy; override;
+
+      procedure UpdateRect( ARect: TRectF );
+      procedure Realign; virtual; abstract;
+
+      property Rect: TRectF read FRect;
+
+    published
+      property Slots: TCustomWidgetSlotList read FSlots;
+  end;
+
+  TWidgetDirection = ( wdVertical, wdHorizontal );
+
+  { TWidgetBox }
+
+  TWidgetBox = class ( specialize TWidgetContainer < TWidgetSlotBox >)
+    private
+      FDirection: TWidgetDirection;
+
+      procedure SetDirection(AValue: TWidgetDirection);
+
+    public
+      procedure Realign; override;
+
+      property Direction: TWidgetDirection read FDirection write SetDirection;
+  end;
+
 implementation
+
+{ TWidgetBox }
+
+procedure TWidgetBox.SetDirection(AValue: TWidgetDirection);
+begin
+  if FDirection=AValue then Exit;
+  FDirection:=AValue;
+  Realign;
+end;
+
+procedure TWidgetBox.Realign;
+var
+  RemainingSpace, WidgetRect: TRectF;
+  i, C: Integer;
+begin
+  RemainingSpace:= Rect;
+
+  C:= Slots.Count;
+  for i:= 0 to C - 1 do begin
+    WidgetRect:= RemainingSpace;
+    WidgetRect.Height:= WidgetRect.Height / C;
+    Slots[ i ].UpdateWidgetDimensions( WidgetRect );
+    RemainingSpace:= RectFEx( RemainingSpace.Left, WidgetRect.Bottom, RemainingSpace.Right, RemainingSpace.Bottom );
+  end;
+end;
+
+{ TWidgetSlotBox }
+
+procedure TWidgetSlotBox.SetAlign(AValue: TWidgetAlignBox);
+begin
+  if FAlign=AValue then Exit;
+  FAlign:=AValue;
+end;
+
+procedure TWidgetSlotBox.SetMarginEnd(AValue: Float);
+begin
+  if FMarginEnd=AValue then Exit;
+  FMarginEnd:=AValue;
+end;
+
+procedure TWidgetSlotBox.SetMarginStart(AValue: Float);
+begin
+  if FMarginStart=AValue then Exit;
+  FMarginStart:=AValue;
+end;
+
+procedure TWidgetSlotBox.UpdateWidgetDimensions(var ASlotSize: TRectF);
+begin
+
+end;
+
+{ TWidgetSlotList }
+
+function TWidgetSlotList.AddWidget(AWidget: TWidget): Integer;
+var
+  Slot: TWidgetSlotType;
+begin
+  Slot:= TWidgetSlotType.Create;
+
+  Result:= Add( Slot );
+end;
+
+procedure TWidgetSlotList.RemoveWidget(AWidget: TWidget);
+var
+  i: Integer;
+begin
+  for i:= 0 to Count - 1 do
+    if ( Items[ i ].Widget = AWidget ) then begin
+      Delete( i );
+    end;
+end;
+
+{ TWidgetSlot }
+
+procedure TWidgetSlot.SetWidget(AValue: TWidget);
+begin
+  if FWidget=AValue then Exit;
+  if ( Assigned( FWidget )) then
+    FWidget.Free;
+  FWidget:=AValue;
+end;
+
+destructor TWidgetSlot.Destroy;
+begin
+  Widget:= nil;
+  inherited Destroy;
+end;
+
+{ TWidgetContainer }
+
+constructor TWidgetContainer.Create;
+begin
+  FSlots:= TCustomWidgetSlotList.Create;
+//  FSlots.OnChange:= ;
+end;
+
+destructor TWidgetContainer.Destroy;
+begin
+  FreeAndNil( FSlots );
+  inherited Destroy;
+end;
+
+procedure TWidgetContainer.UpdateRect(ARect: TRectF);
+begin
+  FRect:= ARect;
+  Realign;
+end;
 
 { TWidget }
 
@@ -144,7 +341,7 @@ begin
     GeomText:= Context.CreateText( Caption );
     TP:= Rect.AlignInRect( vec2( GeomText.Width, GeomText.Height ), haCenter, vaCenter );
     GeomText.Left:= TP.X;
-    GeomText.Top:= TP.Y;
+    GeomText.Top:= TP.Y + GeomText.Height;
     FActiveStyle.Render( GeomText );
     GeomText.Free;
   end;
